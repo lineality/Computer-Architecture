@@ -158,9 +158,6 @@ class CPU:  # OOP class: CPU
             # for i in self.ram:
             #     print(i)
 
-            # set length of each operation
-            inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
-
             # # start reading ram # instruction = self.ram_read(self.pc)
 
             # load data into register 08
@@ -175,14 +172,14 @@ class CPU:  # OOP class: CPU
 
                 # move ahead to spaces (over the data)
                 # to the next self.ram[self.pc]
-                # self.pc += 3
+                self.pc += 3
 
             # print
             elif self.ram_read(self.pc) == 0b01000111:  # PRN
                 # print register slot 8:8
                 print(self.register[0])
                 # move ahead one self.ram[self.pc]
-                # self.pc += 2
+                self.pc += 2
 
             # Halt !!
             elif self.ram_read(self.pc) == 0b00000001:
@@ -190,7 +187,6 @@ class CPU:  # OOP class: CPU
                 self.running = False
                 break
 
-            # MUL
             elif self.ram_read(self.pc) == 0b10100010:
 
                 # make operand_a operand_b
@@ -201,10 +197,8 @@ class CPU:  # OOP class: CPU
 
                 # move ahead to spaces (over the data)
                 # to the next self.ram[self.pc]
-                # self.pc += 3
+                self.pc += 3
 
             else:
                 print("Unknown instruction")
                 self.running = False
-
-            self.pc += inst_len

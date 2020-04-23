@@ -1,5 +1,7 @@
 """CPU functionality. """
 
+import sys
+
 
 class CPU:  # OOP class: CPU
     """Main CPU class."""
@@ -10,86 +12,76 @@ class CPU:  # OOP class: CPU
         self.register = [0] * 8
         self.pc = 0  # program counter: memory address of current instruction
         self.running = True
+        # instructions (individually?)
+        # self.instructions = {"PRINT_BEEJ": 1, "HALT": 2, "SAVE_REG": 3, "PRINT_REG": 4}
         # The LS-8 has 8-bit addressing, so can address 256 bytes of RAM total.
-        self.ram = [0] * 256
+        self.ram = [0] * 256  # Where does this go?
 
         # Internal Registers
         # PC: Program Counter, address of the currently executing instruction
-        # IR: Instruction Register,
-        #     contains a copy of the currently executing instruction
-        # MAR: Memory Address Register,
-        #      holds the memory address we're reading or writing
-        # MDR: Memory Data Register,
-        #      holds the value to write or the value just read
+        # IR: Instruction Register, contains a copy of the currently executing instruction
+        # MAR: Memory Address Register, holds the memory address we're reading or writing
+        # MDR: Memory Data Register, holds the value to write or the value just read
         # FL: Flags, see below
 
-    def load(self, program_filename):
-        """Load a program into memory."""
+    # Q: Where are the english instructions stored? e.g. "LDI = 0b10000010"
 
-        # inspection
-        # print("trying to load")
+    #
+    # LDI = 0b10000010
+    # NOP = 0b00000000
+    # PRN = 0b10000010
+    # HLT = 0b00000001
+
+    def load(self):
+        """Load a program into memory."""
 
         address = 0
 
-        with open(program_filename) as f:
-            for line in f:
-                line = line.split("#")
-                line = line[0].strip()
+        # For now, we've just hardcoded a program:
+        # program is list of instruction
+        program = [
+            # From print8.ls8
+            0b10000010,  # LDI R0,8
+            0b00000000,  # NOP: No operation. Do nothing for this instruction.
+            0b00001000,  # this is the nubmer 8 (not an operation)
+            0b01000111,  # PRN R0
+            0b00000000,  # NOP: No operation. Do nothing for this instruction.
+            0b00000001,  # HLT Halt
+        ]
 
-                if line == "":
-                    continue
-
-                # set "2" for base 2
-                self.ram[address] = int(line, 2)
-
-                address += 1
-
-        # # boiler plate
-        # for instruction in program:
-        #     self.ram[address] = instruction
-        #     address += 1
+        # boiler plate
+        for instruction in program:
+            self.ram[address] = instruction
+            address += 1
 
     def ST(self, registerA, registerB):
         # Store value in registerB in the address stored in registerA.
-        self.ram[registerA] = registerB
+
+        pass
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa + bb
+            self.reg[reg_a] += self.reg[reg_b]
 
         elif op == "SUB":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa - bb
+            self.reg[reg_a] -= self.reg[reg_b]
 
-        elif op == "MUL":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa * bb
+        elif op == "MULT":
+            self.reg[reg_a] *= self.reg[reg_b]
 
         elif op == "DIV":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa / bb
+            self.reg[reg_a] /= self.reg[reg_b]
 
         elif op == "DIV_FlOOR":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa // bb
+            self.reg[reg_a] //= self.reg[reg_b]
 
         elif op == "MOD":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa % bb
+            self.reg[reg_a] % self.reg[reg_b]
 
         elif op == "XOR":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa ^ bb
+            pass
 
         elif op == "SHR":
             pass
@@ -100,14 +92,12 @@ class CPU:  # OOP class: CPU
         else:
             raise Exception("Unsupported ALU operation")
 
-        return self.register[reg_a]
-
     def trace(self):
         """
-        Handy function to print out the CPU state.
-        You might want to call this
+        Handy function to print out the CPU state. You might want to call this
         from run() if you need help debugging.
         """
+
         print(
             f"TRACE: %02X | %02X %02X %02X |"
             % (
@@ -120,8 +110,10 @@ class CPU:  # OOP class: CPU
             ),
             end="",
         )
+
         for i in range(8):
             print(" %02X" % self.register[i], end="")
+
         print()
 
     def LDI(self, register_slot, item_immediate):
@@ -141,8 +133,6 @@ class CPU:  # OOP class: CPU
     # we'd need an input instruction list of a fixed length
     def run(self):
 
-        # argv[0] is ls8.py
-
         self.running is True
 
         # load the instructions
@@ -158,53 +148,63 @@ class CPU:  # OOP class: CPU
             # for i in self.ram:
             #     print(i)
 
-            # set length of each operation
-            inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
+            # 0b10000010,  # LDI R0,8
+            # 0b00000000,  # NOP: No operation. Do nothing for this instruction
+            # 0b00001000,  # this is the nubmer 8 (not an operation)
+            # 0b01000111,  # PRN R0
+            # 0b00000000,  # NOP: No operation. Do nothing for this instruction
+            # 0b00000001,  # HLT Halt
 
-            # # start reading ram # instruction = self.ram_read(self.pc)
+            # # start reading ram
 
+            instruction = self.ram_read(self.pc)
+
+            # instruction = memory[pc]
+            # instructions are in prprint("Beej!")ograms_list
             # load data into register 08
-            if self.ram_read(self.pc) == 0b10000010:  # LDI
+            # print("instruction", instruction)
+            # print("[self.pc]", [self.pc])
 
+            if self.ram_read(self.pc) == 0b10000010:  # LDI
+                # steps:
                 # make operand_a operand_b
                 operand_a = self.ram_read(self.pc + 1)  # bla
+                # get the data
+                # mask for getting self.ram[self.pc]
                 operand_b = self.ram_read(self.pc + 2)
 
-                # operands are like parameters
+                # required to store in slot 8
                 self.LDI(operand_a, operand_b)
+                # self.register[operand_a] = operand_b
 
                 # move ahead to spaces (over the data)
                 # to the next self.ram[self.pc]
-                # self.pc += 3
+                self.pc += 3
 
-            # print
+                # print
+
             elif self.ram_read(self.pc) == 0b01000111:  # PRN
                 # print register slot 8:8
                 print(self.register[0])
                 # move ahead one self.ram[self.pc]
-                # self.pc += 2
+                self.pc += 2
+                # reg_num = memory[pc + 1]
+                # value = register[reg_num]
+                # print(value)
+                # pc += 2
 
-            # Halt !!
+                # Halt !!
+                # print("self.ram[self.pc]", self.ram_read(self.pc))
+                # print("[self.pc]", [self.pc])
+
             elif self.ram_read(self.pc) == 0b00000001:
                 print("Halt!")
                 self.running = False
                 break
 
-            # MUL
-            elif self.ram_read(self.pc) == 0b10100010:
-
-                # make operand_a operand_b
-                operand_a = self.ram_read(self.pc + 1)  # bla
-                operand_b = self.ram_read(self.pc + 2)
-                #
-                self.alu("MUL", operand_a, operand_b)
-
-                # move ahead to spaces (over the data)
-                # to the next self.ram[self.pc]
-                # self.pc += 3
+                # print("self.ram[self.pc]", self.ram_read(self.pc))
+                # print("[self.pc]", [self.pc])
 
             else:
                 print("Unknown instruction")
                 self.running = False
-
-            self.pc += inst_len
