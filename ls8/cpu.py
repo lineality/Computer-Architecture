@@ -1,8 +1,12 @@
-"""CPU functionality. """
+# emulator
 
 
 class CPU:  # OOP class: CPU
     """Main CPU class."""
+
+    # optional make hash table here
+    # to convert between english and instruction codes
+    # static variable area:
 
     # Constructor
     def __init__(self):
@@ -14,11 +18,35 @@ class CPU:  # OOP class: CPU
         self.ram = [0] * 256
         # see methods to push or pop stack
         # SP Stack Pointer
-        # self.stack_pointer = 244  # stack backward in RAM starting at F4/244
+        # stack backward in RAM starting at F4/244
         self.SP = self.register[7] = 244
-        self.branchtable = {}
 
-        # Internal Registers
+        # general method hash-table
+        # for matching instruction code into to functions(methods)
+        # for storing (basically a hashtable)
+        self.branchtable = {}
+        self.branchtable[0b10000010] = self.handle_LDI
+        self.branchtable[0b00000001] = self.handle_HLT
+        self.branchtable[0b10100010] = self.handle_MUL
+        self.branchtable[0b01000111] = self.handle_PRN
+        self.branchtable[0b01000101] = self.handle_PUSH
+        self.branchtable[0b01000110] = self.handle_POP
+
+        # alu hashtable ('branchtable')
+        # before hours said this was required
+        self.alu_branchtable = {}
+        self.branchtable["ADD"] = self.alu_ADD
+        self.branchtable["SUB"] = self.alu_SUB
+        self.branchtable["MUL"] = self.alu_MUL
+        self.branchtable["DIV"] = self.alu_DIV
+        self.branchtable["DIV_FlOOR"] = self.alu_DIV_FlOOR
+        self.branchtable["MOD"] = self.alu_MOD
+        self.branchtable["XOR"] = self.alu_XOR
+        self.branchtable["SHR"] = self.alu_SHR
+        self.branchtable["SHL"] = self.alu_SHL
+
+        # spec data
+        # Internal Register
         # PC: Program Counter, address of the currently executing instruction
         # IR: Instruction Register,
         #     contains a copy of the currently executing instruction
@@ -28,15 +56,8 @@ class CPU:  # OOP class: CPU
         #      holds the value to write or the value just read
         # FL: Flags, see below
 
-        # self.branchtable[LDI] =
-        # self.branchtable[LDI] =
-        # self.branchtable[LDI] =
-
     def load(self, program_filename):
         """Load a program into memory."""
-
-        # inspection
-        # print("trying to load")
 
         address = 0
 
@@ -48,15 +69,9 @@ class CPU:  # OOP class: CPU
                 if line == "":
                     continue
 
-                # set "2" for base 2
+                # set "2" for "base 2"
                 self.ram[address] = int(line, 2)
-
                 address += 1
-
-        # # boiler plate
-        # for instruction in program:
-        #     self.ram[address] = instruction
-        #     address += 1
 
     def ST(self, registerA, registerB):
         # Store value in registerB in the address stored in registerA.
@@ -71,60 +86,48 @@ class CPU:  # OOP class: CPU
         else:
             self.register[reg_slot] = item_to_store
 
+    # alu function (method) section starts here
+
+    def alu_ADD(self, reg_a, reg_b):
+        self.register[reg_a] = reg_a + reg_b
+
+    def alu_SUB(self, reg_a, reg_b):
+        self.register[reg_a] = reg_a - reg_b
+
+    def alu_MUL(self, reg_a, reg_b):
+        self.register[reg_a] = reg_a * reg_b
+
+    def alu_DIV(self, reg_a, reg_b):
+        self.register[reg_a] = reg_a / reg_b
+
+    def alu_DIV_FlOOR(self, reg_a, reg_b):
+        self.register[reg_a] = reg_a // reg_b
+
+    def alu_MOD(self, reg_a, reg_b):
+        self.register[reg_a] = reg_a % reg_b
+
+    def alu_XOR(self, reg_a, reg_b):
+        self.register[reg_a] = reg_a ^ reg_b
+
+    def alu_SHR(self, reg_a, reg_b):
+        pass
+
+    def alu_SHL(self, reg_a, reg_b):
+        pass
+
+    # end alu section
+
     def alu(self, op, reg_a, reg_b):
-        """ALU operations."""
+        # uses hashtable for quick lookup of alu functions
 
-        if op == "ADD":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa + bb
-
-        elif op == "SUB":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa - bb
-
-        elif op == "MUL":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa * bb
-
-        elif op == "DIV":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa / bb
-
-        elif op == "DIV_FlOOR":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa // bb
-
-        elif op == "MOD":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa % bb
-
-        elif op == "XOR":
-            aa = self.register[reg_a]
-            bb = self.register[reg_b]
-            self.register[reg_a] = aa ^ bb
-
-        elif op == "SHR":
-            pass
-
-        elif op == "SHL":
-            pass
-
-        else:
-            raise Exception("Unsupported ALU operation")
+        self.alu_branchtable[op](reg_a, reg_b)
 
         return self.register[reg_a]
 
+    # boiler plate
     def trace(self):
         """
         Handy function to print out the CPU state.
-        You might want to call this
-        from run() if you need help debugging.
         """
         print(
             f"TRACE: %02X | %02X %02X %02X |"
@@ -142,15 +145,6 @@ class CPU:  # OOP class: CPU
             print(" %02X" % self.register[i], end="")
         print()
 
-    def LDI(self, register_slot, item_immediate):
-        self.register[register_slot] = item_immediate
-        # codus machina:
-        # 10000010 00000rrr iiiiiiii
-        # 82 0r ii
-
-    def prints(self, reg_slot):
-        return print(self.register[reg_slot])
-
     def ram_read(self, read_this_memory_slot):
         return self.ram[read_this_memory_slot]
 
@@ -158,113 +152,105 @@ class CPU:  # OOP class: CPU
         # 256 slots
         self.ram[memory_slot] = user_input
 
-    # untested
-    def stack_push(self, reg_slot):
+    #####
+    # branchtable style methods (non-alu)
+    #####
+
+    # for understanding the operands/parameters:
+    # self.ram_read(self.pc) is the current pc spot in memory
+    # operand/parameter a = self.ram_read(self.pc + 1)
+    # operand/parameter b = self.ram_read(self.pc + 2)
+
+    def handle_PRN(self):
+        # get operand a
+        operand_a = self.ram_read(self.pc + 1)
+
+        # operand a is the reg slot
+        reg_slot = operand_a
+
+        # perform function: print what is in that reg slot
+        # TODO: ? is return and print redundant?
+        return print(self.register[reg_slot])
+
+    # Load Integer Into Register
+    def handle_LDI(self):
+        # stepped out for read-ability
+
+        # make operand_a operand_b
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2)
+
+        # a is slot, b is data
+        # "immidiate" is name required in specs
+        reg_slot = operand_a
+        item_immediate = operand_b
+
+        self.register[reg_slot] = item_immediate
+
+    # Push the CPU Stack
+    def handle_PUSH(self):
+        # get operand a
+        operand_a = self.ram_read(self.pc + 1)
+
+        # operand a is the reg slot
+        reg_slot = operand_a
+
         # 1. Decrement the SP.
         self.SP -= 1
-        # 2. Copy value in the given register to the address pointed to by SP.
+        # 2. Copy value in the given register to the address pointed to by SP
         self.ram_write(self.SP, self.register[reg_slot])
 
-        # from beej machine
-        # memory[register[7]] = register[memory[pc + 1]]
+    # Pop the CPU Stack
+    def handle_POP(self):
+        # get operand a
+        operand_a = self.ram_read(self.pc + 1)
 
-    # untested
-    def stack_pop(self, reg_slot):
-        # 1. Copy value from address pointed to by SP to the given register.
-        # return to reg item that was at top of the backwards stack
+        # operand a is the reg slot
+        reg_slot = operand_a
+
+        # 1. Copy value from address pointed to by SP to the given register
         self.register[reg_slot] = self.ram_read(self.SP)
-        # 2. Increment SP.
-        # increments the backwards RAM stack
+        # 2. Increment SP. increments the backwards RAM stack
         self.SP += 1
 
-    # for this not to be pre-fixed
-    # we'd need an input instruction list of a fixed length
-    def run(self):
+    def handle_HLT(self):
+        # takes no user_input
 
-        # argv[0] is ls8.py
+        # what does this do? how do you stop a hash-table?
+        print("You there, Halt!!")
+        # if using: while self.running is True
+        self.running = False
+        # # alternately: if using: while True
+        # exit()
+
+    # Multiply
+    def handle_MUL(self):
+        # make operand_a operand_b
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2)
+
+        # call mul from alu arithmetic logic unit
+        self.alu("MUL", operand_a, operand_b)
+
+    def run(self):
 
         self.running is True
 
-        ##############
-        # While Loop #
-        ##############
-
-        # load the instructions
-        # self.load()
-
-        self.pc = 0
-
         while self.running is True:
-            # for i in range(10):
             self.trace()
 
-            # # test
-            # for i in self.ram:
-            #     print(i)
-
-            # set length of each operation
+            # part 1 of auto advance: set length of each operation
             inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
 
-            # # start reading ram # instruction = self.ram_read(self.pc)
+            # # stepped out for readability
+            # # look up function in branch-table:
+            # # this one-line works the same way:
+            # self.branchtable[self.ram_read(self.pc)]()
 
-            # load data into register 08
-            if self.ram_read(self.pc) == 0b10000010:  # LDI
+            # look up function in branch-table:
+            function = self.branchtable[self.ram_read(self.pc)]
 
-                # make operand_a operand_b
-                operand_a = self.ram_read(self.pc + 1)  # bla
-                operand_b = self.ram_read(self.pc + 2)
+            function()
 
-                # operands are like parameters
-                self.LDI(operand_a, operand_b)
-
-                # move ahead to spaces (over the data)
-                # to the next self.ram[self.pc]
-                # self.pc += 3
-
-            # error is here!
-            # print
-            elif self.ram_read(self.pc) == 0b01000111:  # PRN
-                # make operand_a
-                operand_a = self.ram_read(self.pc + 1)  # bla
-
-                # print register slot 8:8
-                self.prints(operand_a)
-
-            # Halt !!
-            elif self.ram_read(self.pc) == 0b00000001:
-                print("Halt!")
-                self.running = False
-                break
-
-            # MUL
-            elif self.ram_read(self.pc) == 0b10100010:
-
-                # make operand_a operand_b
-                operand_a = self.ram_read(self.pc + 1)  # bla
-                operand_b = self.ram_read(self.pc + 2)
-                #
-                self.alu("MUL", operand_a, operand_b)
-
-                # move ahead to spaces (over the data)
-                # to the next self.ram[self.pc]
-                # self.pc += 3
-
-            # PUSH (stack)
-            elif self.ram_read(self.pc) == 0b01000101:
-
-                # operand_a is the Register memory slot
-                operand_a = self.ram_read(self.pc + 1)
-                self.stack_push(operand_a)
-
-            # POP (stack)
-            elif self.ram_read(self.pc) == 0b01000110:
-
-                # make operand_a operand_b
-                operand_a = self.ram_read(self.pc + 1)
-                self.stack_pop(operand_a)
-
-            else:
-                print("Unknown instruction")
-                self.running = False
-
+            # part 2 of auto advance: set length of each operation
             self.pc += inst_len
