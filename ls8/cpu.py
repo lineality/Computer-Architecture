@@ -1,5 +1,16 @@
 # emulator
 
+# spec data
+# Internal Register
+# PC: Program Counter, address of the currently executing instruction
+# IR: Instruction Register,
+#     contains a copy of the currently executing instruction
+# MAR: Memory Address Register,
+#      holds the memory address we're reading or writing
+# MDR: Memory Data Register,
+#      holds the value to write or the value just read
+# FL: Flags, see below
+
 
 class CPU:  # OOP class: CPU
     """Main CPU class."""
@@ -21,40 +32,30 @@ class CPU:  # OOP class: CPU
         # stack backward in RAM starting at F4/244
         self.SP = self.register[7] = 244
 
-        # general method hash-table
+        # general method: using a hash-table
         # for matching instruction code into to functions(methods)
         # for storing (basically a hashtable)
-        self.branchtable = {}
-        self.branchtable[0b10000010] = self.handle_LDI
-        self.branchtable[0b00000001] = self.handle_HLT
-        self.branchtable[0b10100010] = self.handle_MUL
-        self.branchtable[0b01000111] = self.handle_PRN
-        self.branchtable[0b01000101] = self.handle_PUSH
-        self.branchtable[0b01000110] = self.handle_POP
+        # faster/better than using conditionals
+        self.hashtable = {}
+        self.hashtable[0b10000010] = self.handle_LDI
+        self.hashtable[0b00000001] = self.handle_HLT
+        self.hashtable[0b10100010] = self.handle_MUL
+        self.hashtable[0b01000111] = self.handle_PRN
+        self.hashtable[0b01000101] = self.handle_PUSH
+        self.hashtable[0b01000110] = self.handle_POP
 
-        # alu hashtable ('branchtable')
+        # alu hashtable ('hashtable')
         # before hours said this was required
-        self.alu_branchtable = {}
-        self.branchtable["ADD"] = self.alu_ADD
-        self.branchtable["SUB"] = self.alu_SUB
-        self.branchtable["MUL"] = self.alu_MUL
-        self.branchtable["DIV"] = self.alu_DIV
-        self.branchtable["DIV_FlOOR"] = self.alu_DIV_FlOOR
-        self.branchtable["MOD"] = self.alu_MOD
-        self.branchtable["XOR"] = self.alu_XOR
-        self.branchtable["SHR"] = self.alu_SHR
-        self.branchtable["SHL"] = self.alu_SHL
-
-        # spec data
-        # Internal Register
-        # PC: Program Counter, address of the currently executing instruction
-        # IR: Instruction Register,
-        #     contains a copy of the currently executing instruction
-        # MAR: Memory Address Register,
-        #      holds the memory address we're reading or writing
-        # MDR: Memory Data Register,
-        #      holds the value to write or the value just read
-        # FL: Flags, see below
+        self.alu_hashtable = {}
+        self.hashtable["ADD"] = self.alu_ADD
+        self.hashtable["SUB"] = self.alu_SUB
+        self.hashtable["MUL"] = self.alu_MUL
+        self.hashtable["DIV"] = self.alu_DIV
+        self.hashtable["DIV_FlOOR"] = self.alu_DIV_FlOOR
+        self.hashtable["MOD"] = self.alu_MOD
+        self.hashtable["XOR"] = self.alu_XOR
+        self.hashtable["SHR"] = self.alu_SHR
+        self.hashtable["SHL"] = self.alu_SHL
 
     def load(self, program_filename):
         """Load a program into memory."""
@@ -88,39 +89,38 @@ class CPU:  # OOP class: CPU
 
     # alu function (method) section starts here
 
-    def alu_ADD(self, reg_a, reg_b):
+    def alu_ADD(self, reg_a, reg_b):  # add
         self.register[reg_a] = reg_a + reg_b
 
-    def alu_SUB(self, reg_a, reg_b):
+    def alu_SUB(self, reg_a, reg_b):  # subtract
         self.register[reg_a] = reg_a - reg_b
 
-    def alu_MUL(self, reg_a, reg_b):
+    def alu_MUL(self, reg_a, reg_b):  # multiply
         self.register[reg_a] = reg_a * reg_b
 
-    def alu_DIV(self, reg_a, reg_b):
+    def alu_DIV(self, reg_a, reg_b):  # divide
         self.register[reg_a] = reg_a / reg_b
 
-    def alu_DIV_FlOOR(self, reg_a, reg_b):
+    def alu_DIV_FlOOR(self, reg_a, reg_b):  # floor-divide
         self.register[reg_a] = reg_a // reg_b
 
-    def alu_MOD(self, reg_a, reg_b):
+    def alu_MOD(self, reg_a, reg_b):  # modulus/remainder
         self.register[reg_a] = reg_a % reg_b
 
-    def alu_XOR(self, reg_a, reg_b):
+    def alu_XOR(self, reg_a, reg_b):  # XOR ^
         self.register[reg_a] = reg_a ^ reg_b
 
-    def alu_SHR(self, reg_a, reg_b):
-        pass
+    def alu_SHR(self, reg_a, reg_b):  # shift right >>
+        self.register[reg_a] = reg_a >> reg_b
 
-    def alu_SHL(self, reg_a, reg_b):
-        pass
+    def alu_SHL(self, reg_a, reg_b):  # shift left <<
+        self.register[reg_a] = reg_a << reg_b
 
     # end alu section
 
     def alu(self, op, reg_a, reg_b):
         # uses hashtable for quick lookup of alu functions
-
-        self.alu_branchtable[op](reg_a, reg_b)
+        self.alu_hashtable[op](reg_a, reg_b)
 
         return self.register[reg_a]
 
@@ -153,7 +153,7 @@ class CPU:  # OOP class: CPU
         self.ram[memory_slot] = user_input
 
     #####
-    # branchtable style methods (non-alu)
+    # hashtable style methods (non-alu)
     #####
 
     # for understanding the operands/parameters:
@@ -245,10 +245,10 @@ class CPU:  # OOP class: CPU
             # # stepped out for readability
             # # look up function in branch-table:
             # # this one-line works the same way:
-            # self.branchtable[self.ram_read(self.pc)]()
+            # self.hashtable[self.ram_read(self.pc)]()
 
             # look up function in branch-table:
-            function = self.branchtable[self.ram_read(self.pc)]
+            function = self.hashtable[self.ram_read(self.pc)]
 
             function()
 
