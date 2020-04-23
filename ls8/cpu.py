@@ -1,4 +1,4 @@
-# emulator
+# ls8 emulator
 
 # spec data
 # Internal Register
@@ -19,9 +19,9 @@ class CPU:  # OOP class: CPU
     # to convert between english and instruction codes
     # static variable area:
 
-    # Constructor
+    # Constructor (special method-function)
     def __init__(self):
-        """CPU Attributes"""
+        """CPU class Attributes"""
         self.register = [0] * 8
         self.pc = 0  # program counter: memory address of current instruction
         self.running = True
@@ -47,29 +47,25 @@ class CPU:  # OOP class: CPU
         # alu hashtable ('hashtable')
         # before hours said this was required
         self.alu_hashtable = {}
-        self.hashtable["ADD"] = self.alu_ADD
-        self.hashtable["SUB"] = self.alu_SUB
-        self.hashtable["MUL"] = self.alu_MUL
-        self.hashtable["DIV"] = self.alu_DIV
-        self.hashtable["DIV_FlOOR"] = self.alu_DIV_FlOOR
-        self.hashtable["MOD"] = self.alu_MOD
-        self.hashtable["XOR"] = self.alu_XOR
-        self.hashtable["SHR"] = self.alu_SHR
-        self.hashtable["SHL"] = self.alu_SHL
+        self.alu_hashtable["ADD"] = self.alu_ADD
+        self.alu_hashtable["SUB"] = self.alu_SUB
+        self.alu_hashtable["MUL"] = self.alu_MUL
+        self.alu_hashtable["DIV"] = self.alu_DIV
+        self.alu_hashtable["DIV_FlOOR"] = self.alu_DIV_FlOOR
+        self.alu_hashtable["MOD"] = self.alu_MOD
+        self.alu_hashtable["XOR"] = self.alu_XOR
+        self.alu_hashtable["SHR"] = self.alu_SHR
+        self.alu_hashtable["SHL"] = self.alu_SHL
 
     def load(self, program_filename):
         """Load a program into memory."""
-
         address = 0
-
         with open(program_filename) as f:
             for line in f:
                 line = line.split("#")
                 line = line[0].strip()
-
                 if line == "":
                     continue
-
                 # set "2" for "base 2"
                 self.ram[address] = int(line, 2)
                 address += 1
@@ -90,35 +86,38 @@ class CPU:  # OOP class: CPU
     # alu function (method) section starts here
 
     def alu_ADD(self, reg_a, reg_b):  # add
-        self.register[reg_a] = reg_a + reg_b
+        self.register[reg_a] = self.register[reg_a] + self.register[reg_b]
 
     def alu_SUB(self, reg_a, reg_b):  # subtract
-        self.register[reg_a] = reg_a - reg_b
+        self.register[reg_a] = self.register[reg_a] - self.register[reg_b]
 
     def alu_MUL(self, reg_a, reg_b):  # multiply
-        self.register[reg_a] = reg_a * reg_b
+        self.register[reg_a] = self.register[reg_a] * self.register[reg_b]
 
     def alu_DIV(self, reg_a, reg_b):  # divide
-        self.register[reg_a] = reg_a / reg_b
+        self.register[reg_a] = self.register[reg_a] / self.register[reg_b]
 
     def alu_DIV_FlOOR(self, reg_a, reg_b):  # floor-divide
-        self.register[reg_a] = reg_a // reg_b
+        self.register[reg_a] = self.register[reg_a] // self.register[reg_b]
 
     def alu_MOD(self, reg_a, reg_b):  # modulus/remainder
-        self.register[reg_a] = reg_a % reg_b
+        self.register[reg_a] = self.register[reg_a] % self.register[reg_b]
 
     def alu_XOR(self, reg_a, reg_b):  # XOR ^
-        self.register[reg_a] = reg_a ^ reg_b
+        self.register[reg_a] = self.register[reg_a] ^ self.register[reg_b]
 
     def alu_SHR(self, reg_a, reg_b):  # shift right >>
-        self.register[reg_a] = reg_a >> reg_b
+        self.register[reg_a] = self.register[reg_a] >> self.register[reg_b]
 
     def alu_SHL(self, reg_a, reg_b):  # shift left <<
-        self.register[reg_a] = reg_a << reg_b
+        self.register[reg_a] = self.register[reg_a] << self.register[reg_b]
 
     # end alu section
 
     def alu(self, op, reg_a, reg_b):
+
+        print("alu does: ", op)
+
         # uses hashtable for quick lookup of alu functions
         self.alu_hashtable[op](reg_a, reg_b)
 
@@ -218,6 +217,7 @@ class CPU:  # OOP class: CPU
 
         # what does this do? how do you stop a hash-table?
         print("You there, Halt!!")
+        print("Put the peanut butter down!")
         # if using: while self.running is True
         self.running = False
         # # alternately: if using: while True
