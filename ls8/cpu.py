@@ -110,32 +110,33 @@ class CPU:  # OOP class: CPU
     def handle_CMP(self):
         # this works with 3 register flags: E, L, G
         # compare values in 2 registers
-        #
-        reg_a = self.ram_read(self.pc + 1)
-        reg_b = self.ram_read(self.pc + 2)
+        # not the values listed after, the values those point to:
+
+        reg_a_value = self.register[self.ram_read(self.pc + 1)]
+        reg_b_value = self.register[self.ram_read(self.pc + 2)]
 
         # inspection:
-        print(f"CMP: {reg_a} vs {reg_b}")
+        print(f"CMP: {reg_a_value} vs {reg_b_value}")
 
         # = If they are equal,
         # set the Equal E flag to 1, otherwise set it to 0.
-        if reg_a == reg_b:
+        if reg_a_value == reg_b_value:
             self.E = 1
 
-        else:  # reg_a != reg_b:
+        else:  # reg_a_value != reg_b_value:
             self.E = 0
 
         # < If registerA is less than registerB,
         # set the Less-than L flag to 1, otherwise set it to 0.
-        if reg_a < reg_b:
+        if reg_a_value < reg_b_value:
             self.L = 1
 
-        else:  # reg_a !< reg_b:
+        else:  # reg_a_value !< reg_b_value:
             self.L = 0
 
         # > If registerA is greater than registerB,
         # set the Greater-than G flag to 1, otherwise set it to 0.
-        if reg_a > reg_b:
+        if reg_a_value > reg_b_value:
             self.G = 1
 
         else:  # reg_a !> reg_b:
