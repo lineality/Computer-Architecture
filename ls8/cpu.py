@@ -116,7 +116,7 @@ class CPU:  # OOP class: CPU
         reg_b_value = self.register[self.ram_read(self.pc + 2)]
 
         # inspection:
-        print(f"CMP: {reg_a_value} vs {reg_b_value}")
+        # print(f"CMP: {reg_a_value} vs {reg_b_value}")
 
         # = If they are equal,
         # set the Equal E flag to 1, otherwise set it to 0.
@@ -142,7 +142,7 @@ class CPU:  # OOP class: CPU
         else:  # reg_a !> reg_b:
             self.G = 0
 
-        print(f"E: {self.E}, L: {self.L}, G: {self.G}")
+        # print(f"E: {self.E}, L: {self.L}, G: {self.G}")
 
     # Multiply
     def handle_MUL(self):
@@ -217,10 +217,10 @@ class CPU:  # OOP class: CPU
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
 
-        # inpection
-        print("Hands up! This is the LDI!")
-        print("reg_slot = operand_a: ", operand_a)
-        print("item_immediate = operand_b: ", operand_b)
+        # # inpection
+        # print("Hands up! This is the LDI!")
+        # print("reg_slot = operand_a: ", operand_a)
+        # print("item_immediate = operand_b: ", operand_b)
 
         # a is slot, b is data
         # "immidiate" is name required in specs
@@ -304,7 +304,7 @@ class CPU:  # OOP class: CPU
         operand_a = self.ram_read(self.pc + 1)
 
         # inspection
-        print("printing reg slot: ", operand_a)
+        # print("printing reg slot: ", operand_a)
 
         # operand a is the reg slot
         reg_slot = operand_a
@@ -402,7 +402,7 @@ class CPU:  # OOP class: CPU
 
         while self.running is True:  # alternately, while True, then exit()
             # #  optional: prints trace
-            self.trace()
+            # self.trace()
 
             # part 1 of auto advance: set length of each operation
             inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
