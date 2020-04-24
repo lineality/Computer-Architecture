@@ -25,6 +25,7 @@ class CPU:  # OOP class: CPU
         self.register = [0] * 8
         self.pc = 0  # program counter: memory address of current instruction
         self.fl = 0  # flag register special
+        self.E = False  # "equal flag"
         self.running = True
         # The LS-8 has 8-bit addressing, so can address 256 bytes of RAM total.
         self.ram = [0] * 256
@@ -47,7 +48,13 @@ class CPU:  # OOP class: CPU
         self.jumptable[0b01000110] = self.handle_POP  # pop stack
         self.jumptable[0b01010000] = self.handle_CALL  # call and return
         self.jumptable[0b00010001] = self.handle_RET  # call and return
-        self.jumptable[0b01010100] = self.handle_JMP  # jump register
+        # Sprint Challenge:
+        self.jumptable[0b01010100] = self.handle_JMP  # jump to register
+        # cmp: Compare values in two registers
+        self.jumptable[0b10100111] = self.handle_CMP  # cmp
+        self.jumptable[0b01010110] = self.handle_JNE  # JNE
+        # JEQ: Jump if Equal (check E flag)
+        self.jumptable[0b01010101] = self.handle_JEQ  # JEQ
 
         # alu jumptable ('jumptable')
         # before hours said this was required
@@ -93,6 +100,11 @@ class CPU:  # OOP class: CPU
 
         # call mul from alu arithmetic logic unit
         self.alu("ADD", operand_a, operand_b)
+
+    def handle_CMP(self):
+        reg_a = self.ram_read(self.pc + 1)
+        reg_b = self.ram_read(self.pc + 2)
+        return self.register[reg_a] == self.register[reg_b]
 
     # Multiply
     def handle_MUL(self):
@@ -166,6 +178,21 @@ class CPU:  # OOP class: CPU
 
     # untested
     # Load Integer Into Register
+    def handle_JEQ(self):
+        # this is similar to JMP,
+        # BUT it only jumps if E-flag is True
+
+        if self.E is True:
+            # this is similar to call-return, but just jumps
+
+            # set the program_counter to the number in reg from previous LDI
+            self.pc = self.register[self.ram_read(self.pc + 1)]
+
+            # TODO: maybe move the stack back one just in case?
+            self.pc -= 2
+
+    # untested
+    # Load Integer Into Register
     def handle_JMP(self):
         # this is similar to call-return, but just jumps
 
@@ -175,7 +202,20 @@ class CPU:  # OOP class: CPU
         # TODO: maybe move the stack back one just in case?
         self.pc -= 2
 
-        pass
+    # untested
+    # Load Integer Into Register
+    def handle_JNE(self):
+        # this is similar to JEQ,
+        # BUT it only jumps if E-flag is False
+
+        if self.E is False:
+            # this is similar to call-return, but just jumps
+
+            # set the program_counter to the number in reg from previous LDI
+            self.pc = self.register[self.ram_read(self.pc + 1)]
+
+            # TODO: maybe move the stack back one just in case?
+            self.pc -= 2
 
     # Push the CPU Stack
     def handle_PUSH(self):
