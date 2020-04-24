@@ -1,6 +1,6 @@
-# ls8 emulator
+# ls8 emulator in python, loading files in examples folder(directory)
 
-# spec data
+# spec data:
 # Internal Register
 # PC: Program Counter, address of the currently executing instruction
 # IR: Instruction Register,
@@ -38,15 +38,16 @@ class CPU:  # OOP class: CPU
         # for storing (basically a jumptable)
         # faster/better than using conditionals
         self.jumptable = {}
-        self.jumptable[0b10000010] = self.handle_LDI
-        self.jumptable[0b00000001] = self.handle_HLT
-        self.jumptable[0b10100000] = self.handle_ADD
-        self.jumptable[0b10100010] = self.handle_MUL
-        self.jumptable[0b01000111] = self.handle_PRN
-        self.jumptable[0b01000101] = self.handle_PUSH
-        self.jumptable[0b01000110] = self.handle_POP
-        self.jumptable[0b01010000] = self.handle_CALL
-        self.jumptable[0b00010001] = self.handle_RET
+        self.jumptable[0b10000010] = self.handle_LDI  # load into register
+        self.jumptable[0b00000001] = self.handle_HLT  # halt, stop
+        self.jumptable[0b10100000] = self.handle_ADD  # add (alu)
+        self.jumptable[0b10100010] = self.handle_MUL  # multiply (alu)
+        self.jumptable[0b01000111] = self.handle_PRN  # Print
+        self.jumptable[0b01000101] = self.handle_PUSH  # push to stack
+        self.jumptable[0b01000110] = self.handle_POP  # pop stack
+        self.jumptable[0b01010000] = self.handle_CALL  # call and return
+        self.jumptable[0b00010001] = self.handle_RET  # call and return
+        self.jumptable[0b01010100] = self.handle_JMP  # jump register
 
         # alu jumptable ('jumptable')
         # before hours said this was required
@@ -61,33 +62,48 @@ class CPU:  # OOP class: CPU
         self.alu_jumptable["SHR"] = self.alu_SHR
         self.alu_jumptable["SHL"] = self.alu_SHL
 
-    def load(self, program_filename):
-        """Load a program into memory."""
-        address = 0
-        with open(program_filename) as f:
-            for line in f:
-                line = line.split("#")
-                line = line[0].strip()
-                if line == "":
-                    continue
-                # set "2" for "base 2"
-                self.ram[address] = int(line, 2)
-                address += 1
+    #####
+    # jumptable style methods (non-alu)
+    #####
 
-    def ST(self, registerA, registerB):
-        # Store value in registerB in the address stored in registerA.
-        self.ram[registerA] = registerB
+    # for understanding the operands/parameters:
+    # self.ram_read(self.pc) is the current pc spot in memory
+    # operand/parameter a = self.ram_read(self.pc + 1)
+    # operand/parameter b = self.ram_read(self.pc + 2)
 
-    # untested
-    def reg_write_plus_stack(self, reg_slot, item_to_store):
-        # if the register is full, use the stack_pop
-        if self.register[7] != 0:
-            self.stack_push(item_to_store)
-        # otherwise just store in register
-        else:
-            self.register[reg_slot] = item_to_store
+    ##########
+    #  for ALU
+    ##########
 
-    # alu function (method) section starts here
+    # alu itself
+    def alu(self, op, reg_a, reg_b):
+        # inspection
+        # print("alu does: ", op)
+
+        # uses jumptable for quick lookup of alu functions
+        self.alu_jumptable[op](reg_a, reg_b)
+        return self.register[reg_a]
+
+    # Add
+    def handle_ADD(self):
+        # print("adding...")
+        # make operand_a operand_b
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2)
+
+        # call mul from alu arithmetic logic unit
+        self.alu("ADD", operand_a, operand_b)
+
+    # Multiply
+    def handle_MUL(self):
+        # print("mulpiplying...")
+        # make operand_a operand_b
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2)
+        # call mul from alu arithmetic logic unit
+        self.alu("MUL", operand_a, operand_b)
+
+    # alu_jumptable functions (methods) section starts here
 
     def alu_ADD(self, reg_a, reg_b):  # add
         self.register[reg_a] = self.register[reg_a] + self.register[reg_b]
@@ -118,62 +134,16 @@ class CPU:  # OOP class: CPU
 
     # end alu section
 
-    def alu(self, op, reg_a, reg_b):
+    def handle_HLT(self):
+        # takes no user_inputLDI
 
-        # print("alu does: ", op)
-
-        # uses jumptable for quick lookup of alu functions
-        self.alu_jumptable[op](reg_a, reg_b)
-
-        return self.register[reg_a]
-
-    # boiler plate
-    def trace(self):
-        """
-        Handy function to print out the CPU state.
-        """
-        print(
-            f"TRACE: %02X | %02X %02X %02X |"
-            % (
-                self.pc,
-                # self.fl,
-                # self.ie,
-                self.ram_read(self.pc),
-                self.ram_read(self.pc + 1),
-                self.ram_read(self.pc + 2),
-            ),
-            end="",
-        )
-        for i in range(8):
-            print(" %02X" % self.register[i], end="")
-        print()
-
-    def ram_read(self, read_this_memory_slot):
-        return self.ram[read_this_memory_slot]
-
-    def ram_write(self, memory_slot, user_input):
-        # 256 slots
-        self.ram[memory_slot] = user_input
-
-    #####
-    # jumptable style methods (non-alu)
-    #####
-
-    # for understanding the operands/parameters:
-    # self.ram_read(self.pc) is the current pc spot in memory
-    # operand/parameter a = self.ram_read(self.pc + 1)
-    # operand/parameter b = self.ram_read(self.pc + 2)
-
-    def handle_PRN(self):
-        # get operand a
-        operand_a = self.ram_read(self.pc + 1)
-
-        # operand a is the reg slot
-        reg_slot = operand_a
-
-        # perform function: print what is in that reg slot
-        # TODO: ? is return and print redundant?
-        return print(self.register[reg_slot])
+        # what does this do? how do you stop a hash-table?
+        print("You there, Halt!!")
+        print("Put the peanut butter down!")
+        # if using: while self.running is True
+        self.running = False
+        # # alternately: if using: while True
+        # exit()
 
     # Load Integer Into Register
     def handle_LDI(self):
@@ -193,6 +163,19 @@ class CPU:  # OOP class: CPU
         # print("item_immediate", item_immediate)
 
         self.register[reg_slot] = item_immediate
+
+    # untested
+    # Load Integer Into Register
+    def handle_JMP(self):
+        # this is similar to call-return, but just jumps
+
+        # set the program_counter to the number in reg from previous LDI
+        self.pc = self.register[self.ram_read(self.pc + 1)]
+
+        # TODO: maybe move the stack back one just in case?
+        self.pc -= 2
+
+        pass
 
     # Push the CPU Stack
     def handle_PUSH(self):
@@ -222,36 +205,16 @@ class CPU:  # OOP class: CPU
         # 2. Increment SP. increments the backwards RAM stack
         self.SP += 1
 
-    def handle_HLT(self):
-        # takes no user_input
-
-        # what does this do? how do you stop a hash-table?
-        # print("You there, Halt!!")
-        # print("Put the peanut butter down!")
-        # if using: while self.running is True
-        self.running = False
-        # # alternately: if using: while True
-        # exit()
-
-    # Add
-    def handle_ADD(self):
-        # print("adding...")
-        # make operand_a operand_b
+    def handle_PRN(self):
+        # get operand a
         operand_a = self.ram_read(self.pc + 1)
-        operand_b = self.ram_read(self.pc + 2)
 
-        # call mul from alu arithmetic logic unit
-        self.alu("ADD", operand_a, operand_b)
+        # operand a is the reg slot
+        reg_slot = operand_a
 
-    # Multiply
-    def handle_MUL(self):
-        # print("mulpiplying...")
-        # make operand_a operand_b
-        operand_a = self.ram_read(self.pc + 1)
-        operand_b = self.ram_read(self.pc + 2)
-
-        # call mul from alu arithmetic logic unit
-        self.alu("MUL", operand_a, operand_b)
+        # perform function: print what is in that reg slot
+        # TODO: ? is return and print redundant?
+        return print(self.register[reg_slot])
 
     # Call register
     # for call and return
@@ -260,69 +223,107 @@ class CPU:  # OOP class: CPU
         # handle_CALL stores (stack push) the address "afterwards"
         # to return to later...but
         # this isn't standard operand_a = self.ram_read(self.pc + 1)
-        # it's the one after that!
+        # it's "self.pc + 2", the location itself the one after that!
 
         # Step 1: Push
         # So do a modified push: reaching out 2 spaces
         # modified read...binary...
 
         # get operand a
-        # operand_a = self.ram_read(self.pc + 2)
         operand_a = self.pc + 2
-        # print("operand_a", operand_a)
-
-        # self.register[operand_a]
 
         # 1. Decrement the SP.
         self.SP -= 1
         # 2. Copy value in the given register to the address pointed to by SP
-        # print("operand_a", operand_a)
-        # print("testself.register[5]", self.register[5])
-        # Which reg slot to use? try...5?
         self.ram_write(self.SP, operand_a)
-        # def ram_write(self, memory_slot, user_input):
 
         # Step 2:
-        # set the program_counter to the number in
-        # print("next self.pc", self.ram_read(self.pc + 1))
-        # print("reg saved instruction ", self.register[self.ram_read(self.pc + 1)])
-
+        # set the program_counter to the number in reg from previous LDI
         self.pc = self.register[self.ram_read(self.pc + 1)]
-
-        # function = self.jumptable[self.register[self.ram_read(self.pc + 1)]]
-        #
-        # function()
 
         # TODO: maybe move the stack back one just in case?
         self.pc -= 2
 
-    # Return (to PC operation #3 at top of stack)
+    # Return (to PC operation stored at top of stack)
     # for call and return
     def handle_RET(self):
-        # hmm...no instruction for whttps://tetrix.now.sh/here to pop to
-        # So:
-        # do a modified POP, move directly to: self.pc = that
+        # ...no instruction for whttps://tetrix.now.sh/here to pop to
+        # So: do a modified POP, move directly to: self.pc = that
 
         # 1. Copy value from address pointed to by SP to the given register
         self.pc = self.ram_read(self.SP)
         # 2. Increment SP. increments the backwards RAM stack
         self.SP += 1
 
-        # TODO: maybe move the stack back one just in case?
+        # move the stack back one to offset auto advance
         self.pc -= 1
+
+    def load(self, program_filename):
+        """Load a program into memory."""
+        address = 0
+        with open(program_filename) as f:
+            for line in f:
+                line = line.split("#")
+                line = line[0].strip()
+                if line == "":
+                    continue
+                # set "2" for "base 2"
+                self.ram[address] = int(line, 2)
+                address += 1
+
+    def ST(self, registerA, registerB):
+        # Store value in registerB in the address stored in registerA.
+        self.ram[registerA] = registerB
+
+    # boiler plate: so ugly...
+    def trace(self):
+        """
+        Handy function to print out the CPU state.
+        """
+        print(
+            f"TRACE: %02X | %02X %02X %02X |"
+            % (
+                self.pc,
+                # self.fl,
+                # self.ie,
+                self.ram_read(self.pc),
+                self.ram_read(self.pc + 1),
+                self.ram_read(self.pc + 2),
+            ),
+            end="",
+        )
+        for i in range(8):
+            print(" %02X" % self.register[i], end="")
+        print()
+
+    def ram_read(self, read_this_memory_slot):
+        return self.ram[read_this_memory_slot]
+
+    def ram_write(self, memory_slot, user_input):
+        # 256 slots
+        self.ram[memory_slot] = user_input
+
+    # untested
+    def reg_write_plus_stack(self, reg_slot, item_to_store):
+        # if the register is full, use the stack_pop
+        if self.register[7] != 0:
+            self.stack_push(item_to_store)
+        else:  # otherwise just store in register
+            self.register[reg_slot] = item_to_store
 
     # Call
     def run(self):
 
         self.running is True
 
-        while self.running is True:
+        while self.running is True:  # alternately, while True, then exit()
+            # #  optional: prints trace
             # self.trace()
 
             # part 1 of auto advance: set length of each operation
             inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
 
-            # # stepped out for readability
+            # # stepped out for readability:
             # # look up function in branch-table:
             # # this one-line works the same way:
             # self.jumptable[self.ram_read(self.pc)]()
