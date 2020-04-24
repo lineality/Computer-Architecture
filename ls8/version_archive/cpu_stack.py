@@ -1,4 +1,9 @@
 """CPU functionality. """
+# currenlty this requres another file ls8.py to run, which also loads program
+# run from terminal with line such as:
+# $ python3 ls8.py examples/sctest.ls8
+
+# Q: Alphabetical order for methods?
 
 
 class CPU:  # OOP class: CPU
@@ -18,25 +23,8 @@ class CPU:  # OOP class: CPU
         self.SP = self.register[7] = 244
         self.branchtable = {}
 
-        # Internal Registers
-        # PC: Program Counter, address of the currently executing instruction
-        # IR: Instruction Register,
-        #     contains a copy of the currently executing instruction
-        # MAR: Memory Address Register,
-        #      holds the memory address we're reading or writing
-        # MDR: Memory Data Register,
-        #      holds the value to write or the value just read
-        # FL: Flags, see below
-
-        # self.branchtable[LDI] =
-        # self.branchtable[LDI] =
-        # self.branchtable[LDI] =
-
-    def load(self, program_filename):
+    def load(self, program_filename):  # loads any external ls8 program file
         """Load a program into memory."""
-
-        # inspection
-        # print("trying to load")
 
         address = 0
 
@@ -53,16 +41,11 @@ class CPU:  # OOP class: CPU
 
                 address += 1
 
-        # # boiler plate
-        # for instruction in program:
-        #     self.ram[address] = instruction
-        #     address += 1
-
     def ST(self, registerA, registerB):
         # Store value in registerB in the address stored in registerA.
         self.ram[registerA] = registerB
 
-    # untested
+    # untested, experimental (automatically use stack if reg full)
     def reg_write_plus_stack(self, reg_slot, item_to_store):
         # if the register is full, use the stack_pop
         if self.register[7] != 0:
@@ -143,32 +126,28 @@ class CPU:  # OOP class: CPU
         print()
 
     def LDI(self, register_slot, item_immediate):
+        # loads immidate (direct value, not pointer)
+        # into a register
         self.register[register_slot] = item_immediate
-        # codus machina:
-        # 10000010 00000rrr iiiiiiii
-        # 82 0r ii
 
     def prints(self, reg_slot):
+        # prints contents of register slot
         return print(self.register[reg_slot])
 
     def ram_read(self, read_this_memory_slot):
+        # reads ram
         return self.ram[read_this_memory_slot]
 
     def ram_write(self, memory_slot, user_input):
-        # 256 slots
+        # writes to ram: 256 slots FF is end
         self.ram[memory_slot] = user_input
 
-    # untested
     def stack_push(self, reg_slot):
         # 1. Decrement the SP.
         self.SP -= 1
         # 2. Copy value in the given register to the address pointed to by SP.
         self.ram_write(self.SP, self.register[reg_slot])
 
-        # from beej machine
-        # memory[register[7]] = register[memory[pc + 1]]
-
-    # untested
     def stack_pop(self, reg_slot):
         # 1. Copy value from address pointed to by SP to the given register.
         # return to reg item that was at top of the backwards stack
@@ -177,6 +156,7 @@ class CPU:  # OOP class: CPU
         # increments the backwards RAM stack
         self.SP += 1
 
+    # comments from assignment:
     # for this not to be pre-fixed
     # we'd need an input instruction list of a fixed length
     def run(self):
@@ -189,18 +169,14 @@ class CPU:  # OOP class: CPU
         # While Loop #
         ##############
 
-        # load the instructions
+        # load the instructions  (this is currently done with external file)
         # self.load()
 
         self.pc = 0
 
-        while self.running is True:
+        while self.running is True:  # iterate through loaded program
             # for i in range(10):
             self.trace()
-
-            # # test
-            # for i in self.ram:
-            #     print(i)
 
             # set length of each operation
             inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
@@ -217,12 +193,6 @@ class CPU:  # OOP class: CPU
                 # operands are like parameters
                 self.LDI(operand_a, operand_b)
 
-                # move ahead to spaces (over the data)
-                # to the next self.ram[self.pc]
-                # self.pc += 3
-
-            # error is here!
-            # print
             elif self.ram_read(self.pc) == 0b01000111:  # PRN
                 # make operand_a
                 operand_a = self.ram_read(self.pc + 1)  # bla
@@ -244,10 +214,6 @@ class CPU:  # OOP class: CPU
                 operand_b = self.ram_read(self.pc + 2)
                 #
                 self.alu("MUL", operand_a, operand_b)
-
-                # move ahead to spaces (over the data)
-                # to the next self.ram[self.pc]
-                # self.pc += 3
 
             # PUSH (stack)
             elif self.ram_read(self.pc) == 0b01000101:
