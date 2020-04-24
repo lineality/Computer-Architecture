@@ -24,6 +24,7 @@ class CPU:  # OOP class: CPU
         """CPU class Attributes"""
         self.register = [0] * 8
         self.pc = 0  # program counter: memory address of current instruction
+        self.fl = 0  # flag register special
         self.running = True
         # The LS-8 has 8-bit addressing, so can address 256 bytes of RAM total.
         self.ram = [0] * 256
@@ -32,30 +33,33 @@ class CPU:  # OOP class: CPU
         # stack backward in RAM starting at F4/244
         self.SP = self.register[7] = 244
 
-        # general method: using a hash-table
+        # general method: using a hash-table jumptable
         # for matching instruction code into to functions(methods)
-        # for storing (basically a hashtable)
+        # for storing (basically a jumptable)
         # faster/better than using conditionals
-        self.hashtable = {}
-        self.hashtable[0b10000010] = self.handle_LDI
-        self.hashtable[0b00000001] = self.handle_HLT
-        self.hashtable[0b10100010] = self.handle_MUL
-        self.hashtable[0b01000111] = self.handle_PRN
-        self.hashtable[0b01000101] = self.handle_PUSH
-        self.hashtable[0b01000110] = self.handle_POP
+        self.jumptable = {}
+        self.jumptable[0b10000010] = self.handle_LDI
+        self.jumptable[0b00000001] = self.handle_HLT
+        self.jumptable[0b10100000] = self.handle_ADD
+        self.jumptable[0b10100010] = self.handle_MUL
+        self.jumptable[0b01000111] = self.handle_PRN
+        self.jumptable[0b01000101] = self.handle_PUSH
+        self.jumptable[0b01000110] = self.handle_POP
+        self.jumptable[0b01010000] = self.handle_CALL
+        self.jumptable[0b00010001] = self.handle_RET
 
-        # alu hashtable ('hashtable')
+        # alu jumptable ('jumptable')
         # before hours said this was required
-        self.alu_hashtable = {}
-        self.alu_hashtable["ADD"] = self.alu_ADD
-        self.alu_hashtable["SUB"] = self.alu_SUB
-        self.alu_hashtable["MUL"] = self.alu_MUL
-        self.alu_hashtable["DIV"] = self.alu_DIV
-        self.alu_hashtable["DIV_FlOOR"] = self.alu_DIV_FlOOR
-        self.alu_hashtable["MOD"] = self.alu_MOD
-        self.alu_hashtable["XOR"] = self.alu_XOR
-        self.alu_hashtable["SHR"] = self.alu_SHR
-        self.alu_hashtable["SHL"] = self.alu_SHL
+        self.alu_jumptable = {}
+        self.alu_jumptable["ADD"] = self.alu_ADD
+        self.alu_jumptable["SUB"] = self.alu_SUB
+        self.alu_jumptable["MUL"] = self.alu_MUL
+        self.alu_jumptable["DIV"] = self.alu_DIV
+        self.alu_jumptable["DIV_FlOOR"] = self.alu_DIV_FlOOR
+        self.alu_jumptable["MOD"] = self.alu_MOD
+        self.alu_jumptable["XOR"] = self.alu_XOR
+        self.alu_jumptable["SHR"] = self.alu_SHR
+        self.alu_jumptable["SHL"] = self.alu_SHL
 
     def load(self, program_filename):
         """Load a program into memory."""
@@ -116,10 +120,10 @@ class CPU:  # OOP class: CPU
 
     def alu(self, op, reg_a, reg_b):
 
-        print("alu does: ", op)
+        # print("alu does: ", op)
 
-        # uses hashtable for quick lookup of alu functions
-        self.alu_hashtable[op](reg_a, reg_b)
+        # uses jumptable for quick lookup of alu functions
+        self.alu_jumptable[op](reg_a, reg_b)
 
         return self.register[reg_a]
 
@@ -152,7 +156,7 @@ class CPU:  # OOP class: CPU
         self.ram[memory_slot] = user_input
 
     #####
-    # hashtable style methods (non-alu)
+    # jumptable style methods (non-alu)
     #####
 
     # for understanding the operands/parameters:
@@ -173,6 +177,9 @@ class CPU:  # OOP class: CPU
 
     # Load Integer Into Register
     def handle_LDI(self):
+
+        # print("Hands up! This is the LDI!")
+
         # stepped out for read-ability
 
         # make operand_a operand_b
@@ -183,11 +190,14 @@ class CPU:  # OOP class: CPU
         # "immidiate" is name required in specs
         reg_slot = operand_a
         item_immediate = operand_b
+        # print("item_immediate", item_immediate)
 
         self.register[reg_slot] = item_immediate
 
     # Push the CPU Stack
     def handle_PUSH(self):
+        # print("push is happening...happening...")
+
         # get operand a
         operand_a = self.ram_read(self.pc + 1)
 
@@ -216,15 +226,26 @@ class CPU:  # OOP class: CPU
         # takes no user_input
 
         # what does this do? how do you stop a hash-table?
-        print("You there, Halt!!")
-        print("Put the peanut butter down!")
+        # print("You there, Halt!!")
+        # print("Put the peanut butter down!")
         # if using: while self.running is True
         self.running = False
         # # alternately: if using: while True
         # exit()
 
+    # Add
+    def handle_ADD(self):
+        # print("adding...")
+        # make operand_a operand_b
+        operand_a = self.ram_read(self.pc + 1)
+        operand_b = self.ram_read(self.pc + 2)
+
+        # call mul from alu arithmetic logic unit
+        self.alu("ADD", operand_a, operand_b)
+
     # Multiply
     def handle_MUL(self):
+        # print("mulpiplying...")
         # make operand_a operand_b
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
@@ -232,12 +253,71 @@ class CPU:  # OOP class: CPU
         # call mul from alu arithmetic logic unit
         self.alu("MUL", operand_a, operand_b)
 
+    # Call register
+    # for call and return
+    def handle_CALL(self):  # 1 operand/parameter: the next pc
+        # print("Who you call now?")
+        # handle_CALL stores (stack push) the address "afterwards"
+        # to return to later...but
+        # this isn't standard operand_a = self.ram_read(self.pc + 1)
+        # it's the one after that!
+
+        # Step 1: Push
+        # So do a modified push: reaching out 2 spaces
+        # modified read...binary...
+
+        # get operand a
+        # operand_a = self.ram_read(self.pc + 2)
+        operand_a = self.pc + 2
+        # print("operand_a", operand_a)
+
+        # self.register[operand_a]
+
+        # 1. Decrement the SP.
+        self.SP -= 1
+        # 2. Copy value in the given register to the address pointed to by SP
+        # print("operand_a", operand_a)
+        # print("testself.register[5]", self.register[5])
+        # Which reg slot to use? try...5?
+        self.ram_write(self.SP, operand_a)
+        # def ram_write(self, memory_slot, user_input):
+
+        # Step 2:
+        # set the program_counter to the number in
+        # print("next self.pc", self.ram_read(self.pc + 1))
+        # print("reg saved instruction ", self.register[self.ram_read(self.pc + 1)])
+
+        self.pc = self.register[self.ram_read(self.pc + 1)]
+
+        # function = self.jumptable[self.register[self.ram_read(self.pc + 1)]]
+        #
+        # function()
+
+        # TODO: maybe move the stack back one just in case?
+        self.pc -= 2
+
+    # Return (to PC operation #3 at top of stack)
+    # for call and return
+    def handle_RET(self):
+        # hmm...no instruction for whttps://tetrix.now.sh/here to pop to
+        # So:
+        # do a modified POP, move directly to: self.pc = that
+
+        # 1. Copy value from address pointed to by SP to the given register
+        self.pc = self.ram_read(self.SP)
+        # 2. Increment SP. increments the backwards RAM stack
+        self.SP += 1
+
+        # TODO: maybe move the stack back one just in case?
+        self.pc -= 1
+
+    # Call
     def run(self):
 
         self.running is True
 
         while self.running is True:
-            self.trace()
+            # self.trace()
 
             # part 1 of auto advance: set length of each operation
             inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
@@ -245,10 +325,10 @@ class CPU:  # OOP class: CPU
             # # stepped out for readability
             # # look up function in branch-table:
             # # this one-line works the same way:
-            # self.hashtable[self.ram_read(self.pc)]()
+            # self.jumptable[self.ram_read(self.pc)]()
 
             # look up function in branch-table:
-            function = self.hashtable[self.ram_read(self.pc)]
+            function = self.jumptable[self.ram_read(self.pc)]
 
             function()
 
