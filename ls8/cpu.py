@@ -25,7 +25,10 @@ class CPU:  # OOP class: CPU
         self.register = [0] * 8
         self.pc = 0  # program counter: memory address of current instruction
         self.fl = 0  # flag register special
-        self.E = False  # "equal flag"
+        # 3 equality flags E,L,G
+        self.E = 0  # = "equal flag", True=1, False=0
+        self.L = 0  # < less than flag, True=1, False=0
+        self.G = 0  # > greater than flag, True=1, False=0
         self.running = True
         # The LS-8 has 8-bit addressing, so can address 256 bytes of RAM total.
         self.ram = [0] * 256
@@ -48,6 +51,7 @@ class CPU:  # OOP class: CPU
         self.jumptable[0b01000110] = self.handle_POP  # pop stack
         self.jumptable[0b01010000] = self.handle_CALL  # call and return
         self.jumptable[0b00010001] = self.handle_RET  # call and return
+        #
         # Sprint Challenge:
         self.jumptable[0b01010100] = self.handle_JMP  # jump to register
         # cmp: Compare values in two registers
@@ -93,7 +97,9 @@ class CPU:  # OOP class: CPU
 
     # Add
     def handle_ADD(self):
+        # inspection
         # print("adding...")
+
         # make operand_a operand_b
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
@@ -102,13 +108,46 @@ class CPU:  # OOP class: CPU
         self.alu("ADD", operand_a, operand_b)
 
     def handle_CMP(self):
+        # this works with 3 register flags: E, L, G
+        # compare values in 2 registers
+        #
         reg_a = self.ram_read(self.pc + 1)
         reg_b = self.ram_read(self.pc + 2)
-        return self.register[reg_a] == self.register[reg_b]
+
+        # inspection:
+        print(f"CMP: {reg_a} vs {reg_b}")
+
+        # = If they are equal,
+        # set the Equal E flag to 1, otherwise set it to 0.
+        if reg_a == reg_b:
+            self.E = 1
+
+        else:  # reg_a != reg_b:
+            self.E = 0
+
+        # < If registerA is less than registerB,
+        # set the Less-than L flag to 1, otherwise set it to 0.
+        if reg_a < reg_b:
+            self.L = 1
+
+        else:  # reg_a !< reg_b:
+            self.L = 0
+
+        # > If registerA is greater than registerB,
+        # set the Greater-than G flag to 1, otherwise set it to 0.
+        if reg_a > reg_b:
+            self.G = 1
+
+        else:  # reg_a !> reg_b:
+            self.G = 0
+
+        print(f"E: {self.E}, L: {self.L}, G: {self.G}")
 
     # Multiply
     def handle_MUL(self):
-        # print("mulpiplying...")
+        # inspection
+        # print("multiplying...")
+
         # make operand_a operand_b
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
@@ -157,16 +196,30 @@ class CPU:  # OOP class: CPU
         # # alternately: if using: while True
         # exit()
 
+    def load(self, program_filename):
+        """Load a program into memory."""
+        address = 0
+        with open(program_filename) as f:
+            for line in f:
+                line = line.split("#")
+                line = line[0].strip()
+                if line == "":
+                    continue
+                # set "2" for "base 2"
+                self.ram[address] = int(line, 2)
+                address += 1
+
     # Load Integer Into Register
     def handle_LDI(self):
-
-        # print("Hands up! This is the LDI!")
-
-        # stepped out for read-ability
 
         # make operand_a operand_b
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
+
+        # inpection
+        print("Hands up! This is the LDI!")
+        print("reg_slot = operand_a: ", operand_a)
+        print("item_immediate = operand_b: ", operand_b)
 
         # a is slot, b is data
         # "immidiate" is name required in specs
@@ -182,7 +235,7 @@ class CPU:  # OOP class: CPU
         # this is similar to JMP,
         # BUT it only jumps if E-flag is True
 
-        if self.E is True:
+        if self.E == 1:
             # this is similar to call-return, but just jumps
 
             # set the program_counter to the number in reg from previous LDI
@@ -208,7 +261,7 @@ class CPU:  # OOP class: CPU
         # this is similar to JEQ,
         # BUT it only jumps if E-flag is False
 
-        if self.E is False:
+        if self.E == 0:
             # this is similar to call-return, but just jumps
 
             # set the program_counter to the number in reg from previous LDI
@@ -248,6 +301,9 @@ class CPU:  # OOP class: CPU
     def handle_PRN(self):
         # get operand a
         operand_a = self.ram_read(self.pc + 1)
+
+        # inspection
+        print("printing reg slot: ", operand_a)
 
         # operand a is the reg slot
         reg_slot = operand_a
@@ -298,19 +354,6 @@ class CPU:  # OOP class: CPU
         # move the stack back one to offset auto advance
         self.pc -= 1
 
-    def load(self, program_filename):
-        """Load a program into memory."""
-        address = 0
-        with open(program_filename) as f:
-            for line in f:
-                line = line.split("#")
-                line = line[0].strip()
-                if line == "":
-                    continue
-                # set "2" for "base 2"
-                self.ram[address] = int(line, 2)
-                address += 1
-
     def ST(self, registerA, registerB):
         # Store value in registerB in the address stored in registerA.
         self.ram[registerA] = registerB
@@ -358,7 +401,7 @@ class CPU:  # OOP class: CPU
 
         while self.running is True:  # alternately, while True, then exit()
             # #  optional: prints trace
-            # self.trace()
+            self.trace()
 
             # part 1 of auto advance: set length of each operation
             inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
