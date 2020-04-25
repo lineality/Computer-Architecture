@@ -1,22 +1,14 @@
 # ls8 emulator in python, loading files in examples folder(directory)
-
-# spec data:
-# Internal Register
-# PC: Program Counter, address of the currently executing instruction
-# IR: Instruction Register,
-#     contains a copy of the currently executing instruction
-# MAR: Memory Address Register,
-#      holds the memory address we're reading or writing
-# MDR: Memory Data Register,
-#      holds the value to write or the value just read
-# FL: Flags, see below
+# currenlty this requres another file ls8.py to run, which also loads program
+# run from terminal with line such as:
+# $ python3 ls8.py examples/sctest.ls8
 
 
 class CPU:  # OOP class: CPU
     """Main CPU class."""
 
-    # optional make hash table here
-    # to convert between english and instruction codes
+    # optional: make hash table here
+    # e.g. to convert between english and instruction codes
     # static variable area:
 
     # Constructor (special method-function)
@@ -37,7 +29,7 @@ class CPU:  # OOP class: CPU
         # stack backward in RAM starting at F4/244
         self.SP = self.register[7] = 244
 
-        # general method: using a hash-table jumptable
+        # general method: using a branch-table/jumptable (a dictionary!)
         # for matching instruction code into to functions(methods)
         # for storing (basically a jumptable)
         # faster/better than using conditionals
@@ -82,10 +74,6 @@ class CPU:  # OOP class: CPU
     # operand/parameter a = self.ram_read(self.pc + 1)
     # operand/parameter b = self.ram_read(self.pc + 2)
 
-    ##########
-    #  for ALU
-    ##########
-
     # alu itself
     def alu(self, op, reg_a, reg_b):
         # inspection
@@ -110,7 +98,8 @@ class CPU:  # OOP class: CPU
     def handle_CMP(self):
         # this works with 3 register flags: E, L, G
         # compare values in 2 registers
-        # not the values listed after, the values those point to:
+        # not the values listed after in immidiate instructions,
+        # but rather the values those point to in Register:
 
         reg_a_value = self.register[self.ram_read(self.pc + 1)]
         reg_b_value = self.register[self.ram_read(self.pc + 2)]
@@ -142,6 +131,7 @@ class CPU:  # OOP class: CPU
         else:  # reg_a !> reg_b:
             self.G = 0
 
+        # insepction
         # print(f"E: {self.E}, L: {self.L}, G: {self.G}")
 
     # Multiply
@@ -154,6 +144,10 @@ class CPU:  # OOP class: CPU
         operand_b = self.ram_read(self.pc + 2)
         # call mul from alu arithmetic logic unit
         self.alu("MUL", operand_a, operand_b)
+
+    ##########
+    #  for ALU
+    ##########
 
     # alu_jumptable functions (methods) section starts here
 
@@ -230,7 +224,6 @@ class CPU:  # OOP class: CPU
 
         self.register[reg_slot] = item_immediate
 
-    # untested
     # Load Integer Into Register
     def handle_JEQ(self):
         # this is similar to JMP,
@@ -245,7 +238,6 @@ class CPU:  # OOP class: CPU
             # TODO: maybe move the stack back one just in case?
             self.pc -= 2
 
-    # untested
     # Load Integer Into Register
     def handle_JMP(self):
         # this is similar to call-return, but just jumps
@@ -256,7 +248,6 @@ class CPU:  # OOP class: CPU
         # TODO: maybe move the stack back one just in case?
         self.pc -= 2
 
-    # untested
     # Load Integer Into Register
     def handle_JNE(self):
         # this is similar to JEQ,
@@ -299,6 +290,7 @@ class CPU:  # OOP class: CPU
         # 2. Increment SP. increments the backwards RAM stack
         self.SP += 1
 
+    # print
     def handle_PRN(self):
         # get operand a
         operand_a = self.ram_read(self.pc + 1)
@@ -313,8 +305,8 @@ class CPU:  # OOP class: CPU
         # TODO: ? is return and print redundant?
         return print(self.register[reg_slot])
 
-    # Call register
-    # for call and return
+    # Call Register
+    # (for call and return)
     def handle_CALL(self):  # 1 operand/parameter: the next pc
         # print("Who you call now?")
         # handle_CALL stores (stack push) the address "afterwards"
@@ -342,7 +334,7 @@ class CPU:  # OOP class: CPU
         self.pc -= 2
 
     # Return (to PC operation stored at top of stack)
-    # for call and return
+    # (for call and return)
     def handle_RET(self):
         # ...no instruction for whttps://tetrix.now.sh/here to pop to
         # So: do a modified POP, move directly to: self.pc = that
@@ -380,14 +372,16 @@ class CPU:  # OOP class: CPU
             print(" %02X" % self.register[i], end="")
         print()
 
+    # read (RAM)
     def ram_read(self, read_this_memory_slot):
         return self.ram[read_this_memory_slot]
 
+    # write (RAM)
     def ram_write(self, memory_slot, user_input):
         # 256 slots
         self.ram[memory_slot] = user_input
 
-    # untested
+    # untested: experimental auto use of stack...
     def reg_write_plus_stack(self, reg_slot, item_to_store):
         # if the register is full, use the stack_pop
         if self.register[7] != 0:
@@ -404,18 +398,23 @@ class CPU:  # OOP class: CPU
             # #  optional: prints trace
             # self.trace()
 
+            # Auto-Advance Program-Counter 1:2
             # part 1 of auto advance: set length of each operation
             inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
 
-            # # stepped out for readability:
-            # # look up function in branch-table:
+            # # Regarding the next 2 lines of code:
+            # # They stepped out for readability:
+            # # 1. look up function in branch-table.
+            # #    that is, the function the PC counter points to.
+            # # 2. Run that function
             # # this one-line works the same way:
             # self.jumptable[self.ram_read(self.pc)]()
 
-            # look up function in branch-table:
+            # 1. look up function in branch-table:
             function = self.jumptable[self.ram_read(self.pc)]
-
+            # 2. call that function
             function()
 
+            # Auto-Advance Program-Counter 2:2
             # part 2 of auto advance: set length of each operation
             self.pc += inst_len

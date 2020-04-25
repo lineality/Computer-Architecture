@@ -126,8 +126,7 @@ class CPU:  # OOP class: CPU
         print()
 
     def LDI(self, register_slot, item_immediate):
-        # loads immidate (direct value, not pointer)
-        # into a register
+        # loads immidate (direct value, not pointer) into a register
         self.register[register_slot] = item_immediate
 
     def prints(self, reg_slot):
@@ -175,13 +174,13 @@ class CPU:  # OOP class: CPU
         self.pc = 0
 
         while self.running is True:  # iterate through loaded program
+            # # start reading ram # instruction = self.ram_read(self.pc)
+
             # for i in range(10):
             self.trace()
 
             # set length of each operation
             inst_len = ((self.ram_read(self.pc) & 0b11000000) >> 6) + 1  # 3
-
-            # # start reading ram # instruction = self.ram_read(self.pc)
 
             # load data into register 08
             if self.ram_read(self.pc) == 0b10000010:  # LDI
